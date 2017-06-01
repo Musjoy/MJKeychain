@@ -1,0 +1,6 @@
+use_frameworks!
+target 'MJKeychain_Tests' do
+  pod 'MJKeychain', :path => '../'
+  
+  
+end
