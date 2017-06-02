@@ -1,0 +1,16 @@
+PODS:
+  - MJKeychain (0.1.0)
+
+DEPENDENCIES:
+  - MJKeychain (from `../`)
+
+EXTERNAL SOURCES:
+  MJKeychain:
+    :path: ../
+
+SPEC CHECKSUMS:
+  MJKeychain: 21ad09aabb5c983689ae68666037d85875602f0d
+
+PODFILE CHECKSUM: 1ca9e5e243f9c89e868cd17d38adb73b7cb0479f
+
+COCOAPODS: 1.2.1
