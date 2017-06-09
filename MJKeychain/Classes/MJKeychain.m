@@ -51,6 +51,7 @@ static NSString *s_sharedAccessGroup = nil;
     if (s_sharedAccessGroup) {
         return s_sharedAccessGroup;
     }
+    
     NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
                            (id)kSecClassGenericPassword, kSecClass,
                            @"bundleSeedID", kSecAttrAccount,
@@ -58,15 +59,29 @@ static NSString *s_sharedAccessGroup = nil;
                            (id)kCFBooleanTrue, kSecReturnAttributes,
                            (id)kSecMatchLimitAll, kSecMatchLimit,
                            nil];
-    CFArrayRef result = nil;
+    CFArrayRef result = NULL;
+    NSArray *arrGroups = nil;
     OSStatus status = SecItemCopyMatching((CFDictionaryRef)query, (CFTypeRef *)&result);
     if (status == errSecItemNotFound) {
-        status = SecItemAdd((CFDictionaryRef)query, (CFTypeRef *)&result);
+        CFDictionaryRef refResult = NULL;
+        query = [NSDictionary dictionaryWithObjectsAndKeys:
+                 (id)kSecClassGenericPassword, kSecClass,
+                 @"bundleSeedID", kSecAttrAccount,
+                 @"", kSecAttrService,
+                 (id)kCFBooleanTrue, kSecReturnAttributes,
+                 nil];
+        status = SecItemAdd((CFDictionaryRef)query, (CFTypeRef *)&refResult);
+        NSDictionary *aDic = (__bridge NSDictionary *)refResult;
+        if (aDic) {
+            arrGroups = @[aDic];
+        }
+    } else {
+        arrGroups = (__bridge NSArray *)result;
     }
     if (status != errSecSuccess) {
         return nil;
     }
-    NSArray *arrGroups = (__bridge NSArray *)result;
+    
     for (NSDictionary *aDic in arrGroups) {
         NSString *aAccessGroup = [aDic objectForKey:(id)kSecAttrAccessGroup];
         if ([aAccessGroup hasSuffix:kKeychainSharedAccessGroup]) {
