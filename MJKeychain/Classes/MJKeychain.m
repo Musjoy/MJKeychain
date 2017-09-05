@@ -8,6 +8,7 @@
 
 #import "MJKeychain.h"
 
+static NSString *s_defaultAccessGroup = nil;
 static NSString *s_sharedAccessGroup = nil;
 
 
@@ -31,7 +32,7 @@ static NSString *s_sharedAccessGroup = nil;
     static MJKeychain *s_defaultKeychain = nil;
     static dispatch_once_t once_patch;
     dispatch_once(&once_patch, ^() {
-        s_defaultKeychain = [[MJKeychain alloc] initWithIdentifier:kKeychainDefaultService accessGroup:nil];
+        s_defaultKeychain = [[MJKeychain alloc] initWithIdentifier:kKeychainDefaultService accessGroup:[self defaultAccessGroup]];
     });
     return s_defaultKeychain;
 }
@@ -44,6 +45,36 @@ static NSString *s_sharedAccessGroup = nil;
         s_defaultSharedKeychain = [[MJKeychain alloc] initWithIdentifier:kKeychainDefaultService accessGroup:[MJKeychain sharedAccessGroup]];
     });
     return s_defaultSharedKeychain;
+}
+
++ (NSString *)defaultAccessGroup
+{
+    if (s_defaultAccessGroup) {
+        return s_defaultAccessGroup;
+    }
+    
+    NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
+                           (id)kSecClassGenericPassword, kSecClass,
+                           @"bundleSeedID", kSecAttrAccount,
+                           @"", kSecAttrService,
+                           (id)kCFBooleanTrue, kSecReturnAttributes,
+                           nil];
+    CFDictionaryRef result = NULL;
+    OSStatus status = SecItemCopyMatching((CFDictionaryRef)query, (CFTypeRef *)&result);
+    if (status == errSecItemNotFound) {
+        status = SecItemAdd((CFDictionaryRef)query, (CFTypeRef *)&result);
+        if (status != errSecSuccess) {
+            return nil;
+        }
+    }
+    NSString *aAccessGroup = [(__bridge NSDictionary *)result objectForKey:(id)kSecAttrAccessGroup];
+    NSArray *components = [aAccessGroup componentsSeparatedByString:@"."];
+    NSString *bundleSeedId = [[components objectEnumerator] nextObject];
+    CFRelease(result);
+    
+    s_defaultAccessGroup = [bundleSeedId stringByAppendingFormat:@".%@", [[NSBundle mainBundle] bundleIdentifier]];
+    
+    return s_defaultAccessGroup;
 }
 
 + (NSString *)sharedAccessGroup
@@ -71,15 +102,17 @@ static NSString *s_sharedAccessGroup = nil;
                  (id)kCFBooleanTrue, kSecReturnAttributes,
                  nil];
         status = SecItemAdd((CFDictionaryRef)query, (CFTypeRef *)&refResult);
+        if (status != errSecSuccess) {
+            return nil;
+        }
         NSDictionary *aDic = (__bridge NSDictionary *)refResult;
+        CFRelease(refResult);
         if (aDic) {
             arrGroups = @[aDic];
         }
     } else {
         arrGroups = (__bridge NSArray *)result;
-    }
-    if (status != errSecSuccess) {
-        return nil;
+        CFRelease(result);
     }
     
     for (NSDictionary *aDic in arrGroups) {
@@ -91,6 +124,24 @@ static NSString *s_sharedAccessGroup = nil;
     }
     
     if (s_sharedAccessGroup == nil) {
+        // 这里可能是开发刚修改正确，所有需要尝试再创建一个
+        CFDictionaryRef refResult = NULL;
+        query = [NSDictionary dictionaryWithObjectsAndKeys:
+                 (id)kSecClassGenericPassword, kSecClass,
+                 @"bundleSeedID", kSecAttrAccount,
+                 @"", kSecAttrService,
+                 (id)kCFBooleanTrue, kSecReturnAttributes,
+                 nil];
+        status = SecItemAdd((CFDictionaryRef)query, (CFTypeRef *)&refResult);
+        if (status == errSecSuccess) {
+            NSString *aAccessGroup = [(__bridge NSDictionary *)refResult objectForKey:(id)kSecAttrAccessGroup];
+            if ([aAccessGroup hasSuffix:kKeychainSharedAccessGroup]) {
+                s_sharedAccessGroup = aAccessGroup;
+                return s_sharedAccessGroup;
+            }
+            CFRelease(refResult);
+        }
+        
         LogError(@"\n\n\tAccess group with suffix { %@ } is not found! You need to enable 'Keychain Sharing' in target capabilities, And add an Access group with suffix '%@'\n\n.", kKeychainSharedAccessGroup, kKeychainSharedAccessGroup);
     }
     return s_sharedAccessGroup;
@@ -109,6 +160,7 @@ static NSString *s_sharedAccessGroup = nil;
         }
         _identifier = identifier;
         _accessGroup = accessGroup;
+        // kSecClassGenericPassword表:genp 这个表的主键是kSecAttrAccount 和kSecAttrService
         _dicQuery = [NSMutableDictionary dictionaryWithObjectsAndKeys:
                      (id)kSecClassGenericPassword, kSecClass,
                      kCFBooleanTrue, kSecReturnAttributes,
@@ -136,16 +188,22 @@ static NSString *s_sharedAccessGroup = nil;
             return;
         }
         
-        if (object == nil) {
+        if (object == nil || [object isKindOfClass:[NSNull class]]) {
             [attributes removeObjectForKey:(id)kSecAttrGeneric];
             object = [NSNull null];
+            OSStatus result = SecItemDelete((CFDictionaryRef)dicQuery);
+            NSAssert( result == noErr, @"Couldn't delete the Keychain Item." );
+            return;
         } else {
             // 保存到内存
             [attributes setObject:object forKey:(id)kSecAttrGeneric];
         }
-        NSDictionary *dicUpdate = [NSDictionary dictionaryWithObjectsAndKeys:object, kSecAttrGeneric, nil];
+        [dicQuery removeObjectForKey:(id)kSecReturnAttributes];
         
+        NSDictionary *dicUpdate = [NSDictionary dictionaryWithObjectsAndKeys:object, kSecAttrGeneric, nil];
+
         result = SecItemUpdate((CFDictionaryRef)dicQuery, (CFDictionaryRef)dicUpdate);
+
         NSAssert( result == noErr, @"Couldn't update the Keychain Item." );
         
         [_dicItems setObject:attributes forKey:key];
