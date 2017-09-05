@@ -191,7 +191,7 @@ static NSString *s_sharedAccessGroup = nil;
         if (object == nil || [object isKindOfClass:[NSNull class]]) {
             [attributes removeObjectForKey:(id)kSecAttrGeneric];
             object = [NSNull null];
-            OSStatus result = SecItemDelete((CFDictionaryRef)dicQuery);
+            result = SecItemDelete((CFDictionaryRef)dicQuery);
             NSAssert( result == noErr, @"Couldn't delete the Keychain Item." );
             return;
         } else {
