@@ -33,7 +33,7 @@
 /// 这里的identifier会被设置到kSecAttrService
 - (id)initWithIdentifier:(NSString *)identifier accessGroup:(NSString *)accessGroup;
 
-/// 设置keychain中对应key的值，这里key代表kSecAttrAccount，Object代表kSecAttrGeneric，暂时不使用kSecValueData
+/// 设置keychain中对应key的值，这里key代表kSecAttrAccount，Object代表kSecAttrGeneric，暂时不使用kSecValueData. 这里不支持double和bool的NSNumber
 - (void)setObject:(id)object forKey:(NSString *)key;
 /// 返回keychain中保存的object，这里取得是kSecAttrGeneric中的值
 - (id)objectForKey:(NSString *)key;

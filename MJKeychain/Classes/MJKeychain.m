@@ -184,7 +184,9 @@ static NSString *s_sharedAccessGroup = nil;
         // 找到对应数据，对该数据进行更新
         NSMutableDictionary *attributes = [(__bridge NSDictionary*)cfResult mutableCopy];
         NSString *oldValue = [attributes objectForKey:(id)kSecAttrGeneric];
-        if ([oldValue isEqualToString:object]) {
+        if ([oldValue isKindOfClass:[NSString class]] && [oldValue isEqualToString:object]) {
+            return;
+        } else if ([oldValue isKindOfClass:[NSNumber class]] && [(NSNumber *)oldValue isEqualToNumber:object]) {
             return;
         }
         
@@ -215,7 +217,9 @@ static NSString *s_sharedAccessGroup = nil;
         result = SecItemAdd((CFDictionaryRef)dicQuery, (CFTypeRef *)&cfResult);
         NSAssert( result == noErr, @"Couldn't add the Keychain Item." );
         NSMutableDictionary *attributes = [(__bridge NSDictionary*)cfResult mutableCopy];
-        [_dicItems setObject:attributes forKey:key];
+        if (attributes) {
+            [_dicItems setObject:attributes forKey:key];
+        }
     }
 }
 
@@ -235,7 +239,9 @@ static NSString *s_sharedAccessGroup = nil;
     if (result == noErr) {
         // 找到对应数据，对该数据进行更新
         NSMutableDictionary *attributes = [(__bridge NSDictionary*)cfResult mutableCopy];
-        [_dicItems setObject:attributes forKey:key];
+        if (attributes) {
+            [_dicItems setObject:attributes forKey:key];
+        }
         return [attributes objectForKey:(id)kSecAttrGeneric];
     } else {
         return nil;
