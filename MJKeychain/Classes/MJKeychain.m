@@ -183,6 +183,12 @@ static NSString *s_sharedAccessGroup = nil;
     if (SecItemCopyMatching((CFDictionaryRef)dicQuery, (CFTypeRef *)&cfResult) == noErr) {
         // 找到对应数据，对该数据进行更新
         NSMutableDictionary *attributes = [(__bridge NSDictionary*)cfResult mutableCopy];
+        if (object == nil || [object isKindOfClass:[NSNull class]]) {
+            result = SecItemDelete((CFDictionaryRef)dicQuery);
+            NSAssert( result == noErr, @"Couldn't delete the Keychain Item." );
+            return;
+        }
+        
         NSString *oldValue = [attributes objectForKey:(id)kSecAttrGeneric];
         if ([oldValue isKindOfClass:[NSString class]] && [oldValue isEqualToString:object]) {
             return;
@@ -190,16 +196,8 @@ static NSString *s_sharedAccessGroup = nil;
             return;
         }
         
-        if (object == nil || [object isKindOfClass:[NSNull class]]) {
-            [attributes removeObjectForKey:(id)kSecAttrGeneric];
-            object = [NSNull null];
-            result = SecItemDelete((CFDictionaryRef)dicQuery);
-            NSAssert( result == noErr, @"Couldn't delete the Keychain Item." );
-            return;
-        } else {
-            // 保存到内存
-            [attributes setObject:object forKey:(id)kSecAttrGeneric];
-        }
+        [attributes setObject:object forKey:(id)kSecAttrGeneric];
+
         [dicQuery removeObjectForKey:(id)kSecReturnAttributes];
         
         NSDictionary *dicUpdate = [NSDictionary dictionaryWithObjectsAndKeys:object, kSecAttrGeneric, nil];
