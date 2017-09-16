@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'MJKeychain'
-  s.version          = '0.1.2'
+  s.version          = '0.1.3'
   s.summary          = 'MJKeychain is use to access the Keychain in iOS'
 
   s.homepage         = 'https://github.com/Musjoy/MJKeychain'
