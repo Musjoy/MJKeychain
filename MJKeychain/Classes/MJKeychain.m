@@ -190,11 +190,14 @@ static NSString *s_sharedAccessGroup = nil;
         }
         
         NSString *oldValue = [attributes objectForKey:(id)kSecAttrGeneric];
-        if ([oldValue isKindOfClass:[NSString class]] && [oldValue isEqualToString:object]) {
-            return;
-        } else if ([oldValue isKindOfClass:[NSNumber class]] && [(NSNumber *)oldValue isEqualToNumber:object]) {
-            return;
+        if ([oldValue isMemberOfClass:[object class]]) {
+            if ([oldValue isKindOfClass:[NSString class]] && [oldValue isEqualToString:object]) {
+                return;
+            } else if ([oldValue isKindOfClass:[NSNumber class]] && [(NSNumber *)oldValue isEqualToNumber:object]) {
+                return;
+            }
         }
+        
         
         [attributes setObject:object forKey:(id)kSecAttrGeneric];
 
