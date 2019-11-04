@@ -70,7 +70,9 @@ static NSString *s_sharedAccessGroup = nil;
     NSString *aAccessGroup = [(__bridge NSDictionary *)result objectForKey:(id)kSecAttrAccessGroup];
     NSArray *components = [aAccessGroup componentsSeparatedByString:@"."];
     NSString *bundleSeedId = [[components objectEnumerator] nextObject];
-    CFRelease(result);
+    if (result) {
+        CFRelease(result);
+    }
     
     s_defaultAccessGroup = [bundleSeedId stringByAppendingFormat:@".%@", [[NSBundle mainBundle] bundleIdentifier]];
     
@@ -106,13 +108,17 @@ static NSString *s_sharedAccessGroup = nil;
             return nil;
         }
         NSDictionary *aDic = (__bridge NSDictionary *)refResult;
-        CFRelease(refResult);
+        if (refResult) {
+            CFRelease(refResult);
+        }
         if (aDic) {
             arrGroups = @[aDic];
         }
     } else {
         arrGroups = (__bridge NSArray *)result;
-        CFRelease(result);
+        if (result) {
+            CFRelease(result);
+        }
     }
     
     for (NSDictionary *aDic in arrGroups) {
@@ -139,7 +145,9 @@ static NSString *s_sharedAccessGroup = nil;
                 s_sharedAccessGroup = aAccessGroup;
                 return s_sharedAccessGroup;
             }
-            CFRelease(refResult);
+            if (refResult) {
+                CFRelease(refResult);
+            }
         }
         
         LogError(@"\n\n\tAccess group with suffix { %@ } is not found! You need to enable 'Keychain Sharing' in target capabilities, And add an Access group with suffix '%@'\n\n.", kKeychainSharedAccessGroup, kKeychainSharedAccessGroup);
